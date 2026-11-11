@@ -1,0 +1,49 @@
+---
+import Base from '../layouts/Base.astro';
+import { eventTypes } from '../data/site';
+import { events } from '../data/more';
+const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`;
+---
+<Base title="מה קורה" description="סיורים, סדנאות, הופעות ושיחות במוזיאון נֹגה. לוח האירועים המלא." current="/events/">
+  <section class="page-top on-dark">
+    <div class="wrap">
+      <nav class="crumbs" aria-label="פירורי לחם"><a href="/">בית</a><span>/</span><span>מה קורה</span></nav>
+      <h1 style="margin-top:18px">מה <span class="serif t-sun">קורה</span></h1>
+      <p>סיורים, סדנאות, הופעות ושיחות. הלוח מתעדכן כל שבוע, ובחמישי אנחנו נשארים ערים עד חצות.</p>
+    </div>
+  </section>
+
+  <section class="events">
+    <div class="wrap">
+      <div class="events__head">
+        <div>
+          <h2 class="h-two" style="font-size:clamp(36px,5vw,76px)" data-reveal><span>נובמבר</span></h2>
+          <label class="search" data-reveal>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.500-3.500"/></svg>
+            <span class="sr-only">חיפוש אירוע</span>
+            <input type="search" placeholder="חיפוש אירוע, אולם או מנחה" data-search />
+          </label>
+        </div>
+        <div class="chips" role="group" aria-label="סינון לפי סוג אירוע" data-reveal>
+          {eventTypes.map((t, i) => <button class="chip" type="button" data-chip={t} aria-pressed={i === 0 ? 'true' : 'false'}>{t}</button>)}
+        </div>
+      </div>
+      <div class="elist" data-events>
+        {events.map((ev) => (
+          <a class="ev" href="/#visit" data-type={ev.type}>
+            <div class="ev__date"><b>{ev.day}</b><span>{ev.month} · {ev.time}</span></div>
+            <div class="ev__title"><h3>{ev.title}</h3><p>{ev.who}</p></div>
+            <div><span class="pill">{ev.type}</span></div>
+            <div class="ev__place"><b>{ev.place}</b><span class="ev__status" data-s={ev.status}>{ev.status}</span></div>
+            <span class="ev__arrow"><Fragment set:html={arrow} /></span>
+          </a>
+        ))}
+        <p class="empty" data-empty hidden>לא מצאנו אירוע שמתאים לחיפוש. אפשר לנסות מילה אחרת.</p>
+      </div>
+      <div class="events__foot">
+        <span data-live aria-live="polite">מוצגים {events.length} אירועים</span>
+        <a class="btn btn--dark" href="/#visit">שעות וכרטיסים <Fragment set:html={arrow} /></a>
+      </div>
+    </div>
+  </section>
+</Base>

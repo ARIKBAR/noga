@@ -1,0 +1,76 @@
+---
+import Base from '../../layouts/Base.astro';
+import { exhibitions } from '../../data/site';
+export function getStaticPaths() {
+  return exhibitions.map((e) => ({ params: { slug: e.slug } }));
+}
+const { slug } = Astro.params;
+const idx = exhibitions.findIndex((e) => e.slug === slug);
+const e = exhibitions[idx];
+const next = exhibitions[(idx + 1) % exhibitions.length];
+const others = exhibitions.filter((x) => x.slug !== e.slug && x.slug !== next.slug).slice(0, 3);
+const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`;
+---
+<Base title={e.title} description={e.lead}>
+  <section class="phero on-dark">
+    <div class="phero__bg"><img src={`/media/${e.img}.webp`} alt={`${e.title}, מראה הצבה`} data-parallax="7" /></div>
+    <div class="wrap phero__in">
+      <nav class="crumbs" aria-label="פירורי לחם"><a href="/">בית</a><span>/</span><a href="/#exhibitions">תערוכות</a><span>/</span><span>{e.title}</span></nav>
+      <h1>{e.title}<em>{e.en}</em></h1>
+      <div class="phero__meta">
+        <div><span>סוג</span><b>{e.kind}</b></div>
+        <div><span>יוצרים</span><b>{e.artist}</b></div>
+        <div><span>תאריכים</span><b>{e.dates}</b></div>
+        <div><span>מיקום</span><b>{e.hall}</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="article">
+    <div class="wrap article__grid">
+      <p class="article__lead" data-reveal>{e.lead}</p>
+      <div class="article__body">
+        {e.body.map((p) => <p data-reveal>{p}</p>)}
+        <div class="facts" data-reveal>
+          {e.facts.map((f) => <div><b>{f.v}</b><span>{f.k}</span></div>)}
+        </div>
+        <p style="margin-top:40px" data-reveal><a class="btn btn--dark" href="/#visit">לרכישת כרטיסים <Fragment set:html={arrow} /></a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pull">
+    <div class="wrap">
+      <blockquote data-reveal>”{e.quote}“</blockquote>
+      <cite data-reveal>{e.artist}</cite>
+    </div>
+  </section>
+
+  <section class="exh" style="padding-top:clamp(70px,9vw,140px)">
+    <div class="wrap">
+      <h2 class="h-two" data-reveal style="margin-bottom:clamp(40px,6vw,90px)"><span>עוד</span><span class="t-blue serif">תערוכות</span></h2>
+      <div class="exh__grid">
+        {others.map((o, i) => (
+          <a class="card" href={`/exhibitions/${o.slug}/`} data-reveal data-cursor-label="לתערוכה">
+            <div class="card__img" style={`aspect-ratio:${o.ratio}`}>
+              <span class="pill card__num">{o.kind}</span>
+              <img src={`/media/${o.img}.webp`} alt={`${o.title}, ${o.kind}`} loading="lazy" decoding="async" data-parallax="6" />
+            </div>
+            <div class="card__body">
+              <h3>{o.title}<em>{o.en}</em></h3>
+              <p class="card__meta"><b>{o.artist}</b><span>{o.dates}</span></p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <a class="next on-dark" href={`/exhibitions/${next.slug}/`}>
+    <img src={`/media/${next.img}.webp`} alt="" loading="lazy" decoding="async" />
+    <div class="wrap next__in">
+      <p>התערוכה הבאה</p>
+      <h2>{next.title}</h2>
+    </div>
+  </a>
+</Base>

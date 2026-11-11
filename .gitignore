@@ -1,0 +1,35 @@
+# build output
+dist/
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+
+# unused first-round media (kept on disk, not shipped)
+public/media/campus.*
+public/media/center.*
+public/media/culture.*
+public/media/energy.*
+public/media/gateway.*
+public/media/hero.jpg
+public/media/hero.webp
+
+.claude/

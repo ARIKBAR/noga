@@ -1,0 +1,10 @@
+public/media/campus.*
+public/media/center.*
+public/media/culture.*
+public/media/energy.*
+public/media/gateway.*
+public/media/hero.jpg
+public/media/hero.webp
+tools
+Dockerfile
+server.mjs

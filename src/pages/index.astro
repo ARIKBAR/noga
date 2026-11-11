@@ -1,0 +1,243 @@
+---
+import Base from '../layouts/Base.astro';
+import { exhibitions, experiences, stats, eventTypes } from '../data/site';
+import { events, visit, quotes, partners } from '../data/more';
+const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`;
+const zig = `<svg class="zig" viewBox="0 0 54 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l7-6 7 6 7-6 7 6 7-6 7 6 7-6"/></svg>`;
+const rep = (n: number) => Array.from({ length: n });
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+<Base>
+  <!-- HERO -->
+  <section class="hero on-dark">
+    <video class="hero__bg" autoplay muted loop playsinline preload="auto" poster="/media/atrium.webp" aria-hidden="true" data-video>
+      <source src="/media/hero.mp4" type="video/mp4" />
+    </video>
+    <div class="wrap hero__top">
+      <p class="hero__eyebrow"><i></i> פתוח היום עד 18:00 · רציף 4, הנמל הישן</p>
+      <h1>
+        <span class="sr-only">אמנות שמזיזה, שואלת, מאירה ומחברת</span>
+        <span class="line" aria-hidden="true"><span>אמנות</span></span>
+        <span class="rot" data-rot aria-hidden="true">
+          <span class="is-on">שמזיזה</span><span>ששואלת</span><span>שמאירה</span><span>שמחברת</span>
+        </span>
+      </h1>
+      <p class="hero__lead">נֹגה הוא מוזיאון לאמנות ועיצוב על קו המים. שנים‑עשר אולמות, חצר אחת גדולה, והרבה זמן להסתכל.</p>
+      <div class="hero__actions">
+        <a class="btn btn--light" href="/#exhibitions">לתערוכות <Fragment set:html={arrow} /></a>
+        <a class="btn btn--ghost" href="/#visit">תכנון ביקור</a>
+      </div>
+      <div class="hero__stats">
+        <div><b>12</b><span>אולמות תצוגה</span></div>
+        <div><b>6</b><span>תערוכות מוצגות עכשיו</span></div>
+        <div><b>24:00</b><span>פתוח עד חצות בחמישי</span></div>
+      </div>
+    </div>
+    <div class="wrap hero__media">
+      <div class="hero__frame" data-frame>
+        <video autoplay muted loop playsinline preload="auto" poster="/media/light.webp" aria-hidden="true" data-video>
+          <source src="/media/gallery.mp4" type="video/mp4" />
+        </video>
+        <div class="hero__now">
+          <div>
+            <p>עכשיו במוזיאון</p>
+            <h2>קווי אור</h2>
+          </div>
+          <a class="round" href="/exhibitions/lines-of-light/" aria-label="לתערוכה קווי אור"><span><Fragment set:html={arrow} />לתערוכה</span></a>
+        </div>
+      </div>
+    </div>
+    <div class="hero__pad"></div>
+  </section>
+
+  <!-- PARTNERS -->
+  <section class="partners" aria-label="שותפים">
+    <h2 data-reveal>בזכות השותפים שלנו</h2>
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker__track">
+        {rep(2).map(() => partners.map((p) => <span>{p}</span>))}
+      </div>
+    </div>
+  </section>
+
+  <!-- EXHIBITIONS -->
+  <section class="exh" id="exhibitions" aria-labelledby="exh-title">
+    <h2 class="sr-only" id="exh-title">תערוכות</h2>
+    <div class="giant" data-giant aria-hidden="true">
+      <div class="giant__row">{rep(6).map(() => <span>תערוכות —</span>)}</div>
+      <div class="giant__row giant__row--b">{rep(6).map(() => <span>Exhibitions —</span>)}</div>
+    </div>
+    <div class="wrap">
+      <div class="exh__grid">
+        {exhibitions.map((e, i) => (
+          <a class="card" href={`/exhibitions/${e.slug}/`} data-reveal data-cursor-label="לתערוכה">
+            <div class="card__img" style={`aspect-ratio:${e.ratio}`}>
+              <span class="pill card__num">{pad(i + 1)} · {e.kind}</span>
+              <img src={`/media/${e.img}.webp`} alt={`${e.title}, ${e.kind}`} loading={i < 2 ? 'eager' : 'lazy'} decoding="async" data-parallax="6" />
+            </div>
+            <div class="card__body">
+              <h3>{e.title}<em>{e.en}</em></h3>
+              <p class="card__meta"><b>{e.artist}</b><span>{e.dates}</span><span>{e.hall}</span></p>
+            </div>
+          </a>
+        ))}
+      </div>
+      <div class="exh__more" data-reveal>
+        <a class="big-round" href="/events/"><span>מה עוד<br />קורה החודש</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANIFEST -->
+  <section class="manifest on-dark" id="about">
+    <div class="wrap">
+      <Fragment set:html={zig} />
+      <p class="manifest__text" data-words>אנחנו מאמינים שמוזיאון הוא לא מחסן של חפצים יפים אלא <span class="serif">מקום להאט בו.</span> לכן אצלנו יש מעט עבודות בכל חדר, ספסל מול כל אחת מהן, ודלתות שנשארות פתוחות עד מאוחר.</p>
+      <div class="manifest__row">
+        <div class="orbit" data-reveal>
+          <div class="orbit__ring" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="orbit__img"><img src="/media/painting.webp" alt="מבקרת מול ציור מופשט גדול בקומת האוסף" loading="lazy" decoding="async" /></div>
+        </div>
+        <div class="manifest__side">
+          <p class="eyebrow" data-reveal>על המוזיאון</p>
+          <h3 data-reveal style="margin-top:18px">נבנה בתוך מחסן נמל ישן, ונפתח לקהל ב‑2009.</h3>
+          <p data-reveal>הבניין שמר על קורות הפלדה ועל המנוף המקורי, והוסיף להם אטריום של אור. היום פועלים בו שנים‑עשר אולמות, סטודיו פתוח, אודיטוריום וחצר שפונה אל המים.</p>
+          <div class="tiles" data-reveal>
+            <div class="tile"><b>+6</b><span>תערוכות חדשות בשנה</span></div>
+            <div class="tile"><b>+120</b><span>סדנאות וסיורים בחודש</span></div>
+            <div class="tile"><b>0 ₪</b><span>כניסה עד גיל 18</span></div>
+          </div>
+          <a class="btn btn--light" href="/#visit" data-reveal>תכנון ביקור <Fragment set:html={arrow} /></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPERIENCES -->
+  <section class="xp" id="experiences">
+    <div class="wrap">
+      <div class="xp__card">
+        <div class="xp__head">
+          <h2 data-reveal>לא רק <b>להסתכל</b></h2>
+          <p data-reveal>ארבע דרכים לבלות במוזיאון, גם בלי להיכנס לאף תערוכה.</p>
+        </div>
+        {experiences.map((x) => (
+          <article class="row" data-row data-reveal>
+            <h3 class="row__title">{x.title}<small dir="ltr">{x.en}</small></h3>
+            <div class="row__text">
+              <p>{x.text}</p>
+              <ul class="row__tags">{x.tags.map((t) => <li class="pill">{t}</li>)}</ul>
+            </div>
+            <a class="round round--dark" href="/events/" aria-label={`גלו עוד על ${x.title}`}><span><Fragment set:html={arrow} />גלו עוד</span></a>
+          </article>
+        ))}
+      </div>
+    </div>
+    <div class="preview" data-preview aria-hidden="true">
+      {experiences.map((x) => <img src={`/media/${x.img}.webp`} alt="" loading="lazy" decoding="async" />)}
+    </div>
+  </section>
+
+  <!-- NUMBERS -->
+  <section class="nums">
+    <div class="wrap">
+      <div class="nums__head">
+        <h2 class="h-two" data-reveal><span class="t-blue">המוזיאון</span><span class="serif">במספרים</span></h2>
+        <p data-reveal>שש‑עשרה שנים של תערוכות, אוסף שממשיך לגדול, וקהל שחוזר שוב ושוב.</p>
+      </div>
+      <div class="nums__grid">
+        {stats.map((s) => (
+          <div class="num" data-reveal>
+            <b><span data-count={s.n}>{s.n.toLocaleString('en-US')}</span>{s.suffix && <i>{s.suffix}</i>}</b>
+            <span>{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div class="wide">
+      <img src="/media/atrium.webp" alt="האטריום המרכזי של המוזיאון, עם גרם מדרגות לולייני" loading="lazy" decoding="async" data-parallax="8" />
+      <p class="wide__cap">האטריום: 26 מטרים של אור, מהרצפה ועד הגג.</p>
+    </div>
+  </section>
+
+  <!-- EVENTS -->
+  <section class="events" id="events">
+    <div class="wrap">
+      <div class="events__head">
+        <h2 class="h-two" data-reveal><span>מה קורה</span><span class="t-blue serif">החודש</span></h2>
+        <div class="chips" role="group" aria-label="סינון לפי סוג אירוע" data-reveal>
+          {eventTypes.map((t, i) => <button class="chip" type="button" data-chip={t} aria-pressed={i === 0 ? 'true' : 'false'}>{t}</button>)}
+        </div>
+      </div>
+      <div class="elist" data-events>
+        {events.slice(0, 7).map((ev) => (
+          <a class="ev" href="/events/" data-type={ev.type}>
+            <div class="ev__date"><b>{ev.day}</b><span>{ev.month} · {ev.time}</span></div>
+            <div class="ev__title"><h3>{ev.title}</h3><p>{ev.who}</p></div>
+            <div><span class="pill">{ev.type}</span></div>
+            <div class="ev__place"><b>{ev.place}</b><span class="ev__status" data-s={ev.status}>{ev.status}</span></div>
+            <span class="ev__arrow"><Fragment set:html={arrow} /></span>
+          </a>
+        ))}
+        <p class="empty" data-empty hidden>אין אירועים מהסוג הזה בשבועיים הקרובים.</p>
+      </div>
+      <div class="events__foot">
+        <span data-live aria-live="polite">מוצגים 7 אירועים</span>
+        <a class="btn btn--dark" href="/events/">לכל האירועים <Fragment set:html={arrow} /></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISIT -->
+  <section class="visit" id="visit">
+    <div class="wrap">
+      <h2 class="h-two" data-reveal><span>מתכננים</span><span class="t-blue serif">ביקור?</span></h2>
+      <div class="visit__grid">
+        {visit.map((v) => (
+          <article class="vcard" data-reveal>
+            <div class="vcard__en" aria-hidden="true">{v.en}</div>
+            <h3>{v.title}</h3>
+            <ul>{v.lines.map((l) => <li>{l}</li>)}</ul>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- QUOTES -->
+  <section class="quotes on-dark" aria-label="מבקרים מספרים">
+    <div class="wrap">
+      <div class="quotes__mark" aria-hidden="true">”</div>
+      <div class="q-slider">
+        {quotes.map((q) => (
+          <figure class="q" data-q>
+            <blockquote>{q.text}</blockquote>
+            <cite>{q.who}</cite>
+          </figure>
+        ))}
+      </div>
+      <div class="q-nav">
+        <button type="button" data-q-prev aria-label="הציטוט הקודם"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+        <span data-q-count>1 — 3</span>
+        <button type="button" data-q-next aria-label="הציטוט הבא"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="giant" data-giant aria-hidden="true">
+      <div class="giant__row">{rep(5).map(() => <span>נתראה <em>במוזיאון</em> ·</span>)}</div>
+    </div>
+    <div class="wrap cta__box">
+      <h2 data-reveal>רוצים לדעת ראשונים<br />על תערוכה חדשה?</h2>
+      <p data-reveal>מכתב אחד בחודש, בלי רעש. תערוכות, ערבים מיוחדים והזמנות לפתיחות.</p>
+      <form class="form" data-form data-reveal>
+        <label class="sr-only" for="nl-email">כתובת אימייל</label>
+        <input id="nl-email" type="email" name="email" placeholder="האימייל שלכם" required autocomplete="email" dir="rtl" />
+        <button class="btn btn--dark" type="submit">הרשמה <Fragment set:html={arrow} /></button>
+      </form>
+      <p class="form__ok" data-form-ok role="status" aria-live="polite"></p>
+    </div>
+  </section>
+</Base>

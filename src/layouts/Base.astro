@@ -1,0 +1,117 @@
+---
+import '../styles/global.css';
+import { site, nav, exhibitions } from '../data/site';
+interface Props { title?: string; description?: string; current?: string }
+const { title, description = 'נֹגה, מוזיאון לאמנות ועיצוב על קו המים. תערוכות, סדנאות, ערבים במוזיאון ומקום להאט בו.', current = '' } = Astro.props;
+const fullTitle = title ? `${title} | נֹגה, מוזיאון לאמנות ועיצוב` : 'נֹגה | מוזיאון לאמנות ועיצוב';
+const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`;
+---
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#3a3dff" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="/media/building.webp" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/Nostela-VF.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/Plinko-VF.woff2" as="font" type="font/woff2" crossorigin />
+    <script is:inline>
+      document.documentElement.classList.add('js');
+      try { (JSON.parse(localStorage.getItem('a11y') || '[]')).forEach(function (c) { document.documentElement.classList.add(c); }); } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">דילוג לתוכן הראשי</a>
+
+    <header class="header" data-header>
+      <div class="header__bar">
+        <a class="logo" href="/" aria-label="נֹגה, לעמוד הבית">
+          <svg class="logo__mark" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="#3a3dff"/><path d="M20 1a19 19 0 0 1 0 38z" fill="#0b0c22"/><circle cx="20" cy="20" r="7" fill="#ffc940"/></svg>
+          <span>{site.name}<small>{site.tagline}</small></span>
+        </a>
+        <nav class="nav" aria-label="ניווט ראשי">
+          {nav.map((n) => <a href={n.href} aria-current={current === n.href ? 'page' : undefined}>{n.label}</a>)}
+        </nav>
+        <a class="btn btn--ghost header__cta" href="/#visit">לרכישת כרטיסים <Fragment set:html={arrow} /></a>
+        <button class="burger" type="button" aria-label="פתיחת תפריט" aria-expanded="false" aria-controls="mobile-menu" data-burger><span></span><span></span></button>
+      </div>
+    </header>
+
+    <div class="mobile-menu" id="mobile-menu" data-menu>
+      {nav.map((n) => <a class="m-link" href={n.href}>{n.label}</a>)}
+      <a class="btn btn--light" href="/#visit">לרכישת כרטיסים <Fragment set:html={arrow} /></a>
+    </div>
+
+    <a class="rail rail--right" href="/#visit">לרכישת כרטיסים</a>
+    <button class="rail rail--left" type="button" data-top aria-label="חזרה לראש העמוד">
+      <span>חזרה לראש העמוד</span><span class="rail__line"><i data-progress></i></span>
+    </button>
+
+    <main id="main"><slot /></main>
+
+    <footer class="footer on-dark">
+      <div class="wrap">
+        <div class="footer__top">
+          <div>
+            <a class="logo" href="/">
+              <svg class="logo__mark" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="#3a3dff"/><path d="M20 1a19 19 0 0 1 0 38z" fill="#fff"/><circle cx="20" cy="20" r="7" fill="#ffc940"/></svg>
+              <span>{site.name}<small>{site.tagline}</small></span>
+            </a>
+            <p class="footer__blurb">מקום לאמנות ועיצוב על קו המים. פתוח שבעה ימים בשבוע, ובחמישי עד חצות.</p>
+            <div class="social">
+              <a href="#" aria-label="אינסטגרם"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></a>
+              <a href="#" aria-label="פייסבוק"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7h2.4l.4-3h-2.8V9.2c0-.9.3-1.5 1.5-1.5h1.4V5.1c-.3 0-1.100-.1-2.100-.1-2.100 0-3.500 1.300-3.500 3.600V11H8.300v3h2.500v7z"/></svg></a>
+              <a href="#" aria-label="יוטיוב"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.500" y="5.500" width="19" height="13" rx="4"/><path d="M10 9.500v5l4.500-2.500z" fill="currentColor"/></svg></a>
+            </div>
+          </div>
+          <div>
+            <h4>תערוכות</h4>
+            <ul>{exhibitions.slice(0, 5).map((e) => <li><a href={`/exhibitions/${e.slug}/`}>{e.title}</a></li>)}</ul>
+          </div>
+          <div>
+            <h4>המוזיאון</h4>
+            <ul>
+              <li><a href="/events/">מה קורה</a></li>
+              <li><a href="/#experiences">חוויות</a></li>
+              <li><a href="/#about">על המוזיאון</a></li>
+              <li><a href="/#visit">שעות וכרטיסים</a></li>
+              <li><a href="/#visit">נגישות</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>יצירת קשר</h4>
+            <ul>
+              <li>{site.address}</li>
+              <li><a href={`tel:${site.phone}`} dir="ltr">{site.phone}</a></li>
+              <li><a href={`mailto:${site.email}`} dir="ltr">{site.email}</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer__word" aria-hidden="true">{site.nameEn}</div>
+        <div class="footer__bottom">
+          <span>© 2026 נֹגה, מוזיאון לאמנות ועיצוב. כל הזכויות שמורות.</span>
+          <a class="credit" href="#" aria-label="עיצוב ופיתוח: ari liberman"><span>עיצוב ופיתוח</span><img src="/ari-liberman.png" alt="ari liberman" width="270" height="133" loading="lazy" /></a>
+        </div>
+      </div>
+    </footer>
+
+    <button class="a11y-btn" type="button" aria-label="תפריט נגישות" aria-expanded="false" aria-controls="a11y-panel" data-a11y-btn>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.500" r="1.800" fill="currentColor"/><path d="M4.500 8.500h15M12 8.500v6M12 14.500l-3.500 6M12 14.500l3.500 6"/></svg>
+    </button>
+    <div class="a11y-panel" id="a11y-panel" role="dialog" aria-label="אפשרויות נגישות" hidden data-a11y-panel>
+      <h2>נגישות</h2>
+      <button type="button" data-a11y="a11y-big" aria-pressed="false">הגדלת טקסט</button>
+      <button type="button" data-a11y="a11y-contrast" aria-pressed="false">ניגודיות גבוהה</button>
+      <button type="button" data-a11y="a11y-links" aria-pressed="false">הדגשת קישורים</button>
+      <button type="button" data-a11y="a11y-still" aria-pressed="false">עצירת אנימציות</button>
+    </div>
+
+    <div class="cursor" data-cursor aria-hidden="true">לתערוכה</div>
+    <script>import '../scripts/main.ts';</script>
+  </body>
+</html>
