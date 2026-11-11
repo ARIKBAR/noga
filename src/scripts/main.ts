@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
+import { initHero } from './hero';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -94,6 +95,8 @@ $$('[data-a11y]').forEach((b) => {
 });
 
 /* ---------- hero ---------- */
+const heroEl = $('[data-hero]');
+if (heroEl) initHero(heroEl, motion);
 const rot = $('[data-rot]');
 if (rot) {
   const words = $$('span', rot);

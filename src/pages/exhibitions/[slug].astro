@@ -1,19 +1,24 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { exhibitions } from '../../data/site';
+import { events } from '../../data/more';
+import { details } from '../../data/details';
 export function getStaticPaths() {
   return exhibitions.map((e) => ({ params: { slug: e.slug } }));
 }
 const { slug } = Astro.params;
 const idx = exhibitions.findIndex((e) => e.slug === slug);
 const e = exhibitions[idx];
+const d = details[e.slug];
 const next = exhibitions[(idx + 1) % exhibitions.length];
 const others = exhibitions.filter((x) => x.slug !== e.slug && x.slug !== next.slug).slice(0, 3);
+const related = events.filter((ev) => d.eventMatch.some((m) => ev.title.includes(m)));
 const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`;
+const pad = (n: number) => String(n).padStart(2, '0');
 ---
 <Base title={e.title} description={e.lead}>
   <section class="phero on-dark">
-    <div class="phero__bg"><img src={`/media/${e.img}.webp`} alt={`${e.title}, מראה הצבה`} data-parallax="7" /></div>
+    <div class="phero__bg"><img src={`/media/${e.img}-wide.webp`} alt={`${e.title}, מראה הצבה`} fetchpriority="high" data-parallax="7" /></div>
     <div class="wrap phero__in">
       <nav class="crumbs" aria-label="פירורי לחם"><a href="/">בית</a><span>/</span><a href="/#exhibitions">תערוכות</a><span>/</span><span>{e.title}</span></nav>
       <h1>{e.title}<em>{e.en}</em></h1>
@@ -26,15 +31,55 @@ const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
     </div>
   </section>
 
-  <section class="article">
-    <div class="wrap article__grid">
-      <p class="article__lead" data-reveal>{e.lead}</p>
-      <div class="article__body">
-        {e.body.map((p) => <p data-reveal>{p}</p>)}
-        <div class="facts" data-reveal>
-          {e.facts.map((f) => <div><b>{f.v}</b><span>{f.k}</span></div>)}
+  <section class="xi">
+    <div class="wrap">
+      <p class="xi__lead" data-reveal>{d.intro}</p>
+      <div class="xi__facts">
+        {e.facts.map((f) => <div data-reveal><b>{f.v}</b><span>{f.k}</span></div>)}
+      </div>
+    </div>
+  </section>
+
+  <section class="story">
+    <div class="wrap">
+      {d.about.map((blk, i) => (
+        <div class="story__row">
+          <div class="story__text">
+            <p class="eyebrow" data-reveal>{pad(i + 1)} · על התערוכה</p>
+            <h2 data-reveal>{blk.title}</h2>
+            {blk.text.map((t) => <p data-reveal>{t}</p>)}
+          </div>
+          <figure class="fig story__media" data-reveal>
+            <div class="fig__img" style={`aspect-ratio:${i === 0 ? '4 / 5' : e.ratio}`}>
+              <img src={`/media/${i === 0 ? e.img + '-detail' : e.img}.webp`} alt={i === 0 ? d.captions.detail : `${e.title}, ${e.kind}`} loading="lazy" decoding="async" data-parallax="6" />
+            </div>
+            <figcaption>{i === 0 ? d.captions.detail : d.captions.wide}</figcaption>
+          </figure>
         </div>
-        <p style="margin-top:40px" data-reveal><a class="btn btn--dark" href="/#visit">לרכישת כרטיסים <Fragment set:html={arrow} /></a></p>
+      ))}
+    </div>
+  </section>
+
+  <section class="bleed" aria-label="תמונה מהתערוכה">
+    <img src={`/media/${e.img}-life.webp`} alt={d.captions.life} loading="lazy" decoding="async" data-parallax="8" />
+    <p data-reveal>{d.captions.life}</p>
+  </section>
+
+  <section class="works">
+    <div class="wrap works__grid">
+      <div class="works__side">
+        <h2 class="h-two" style="font-size:clamp(36px,5vw,84px)" data-reveal><span>עבודות</span><span class="t-blue">נבחרות</span></h2>
+        <p style="margin-top:20px;color:var(--muted);max-width:380px" data-reveal>שלוש נקודות עצירה שכדאי לא לפספס במסלול התערוכה.</p>
+      </div>
+      <div class="wlist">
+        {d.works.map((w, i) => (
+          <article class="work" data-reveal>
+            <span class="work__n">{pad(i + 1)}</span>
+            <h3>{w.title}<span>{w.year}</span></h3>
+            <p class="work__medium">{w.medium}</p>
+            <p class="work__note">{w.note}</p>
+          </article>
+        ))}
       </div>
     </div>
   </section>
@@ -42,15 +87,57 @@ const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
   <section class="pull">
     <div class="wrap">
       <blockquote data-reveal>”{e.quote}“</blockquote>
-      <cite data-reveal>{e.artist}</cite>
+      <cite data-reveal>{d.bio.name}</cite>
     </div>
   </section>
 
+  <section class="info on-dark">
+    <div class="wrap">
+      <div class="info__grid">
+        <div>
+          <p class="eyebrow" data-reveal>מי מאחורי התערוכה</p>
+          <h2 data-reveal>{d.bio.name}</h2>
+          <p class="info__role" data-reveal>{d.bio.role}</p>
+          <p class="info__bio" data-reveal>{d.bio.text}</p>
+        </div>
+        <div>
+          <p class="eyebrow" data-reveal style="margin-bottom:18px">לפני שמגיעים</p>
+          <dl data-reveal>
+            <div><dt>תאריכים</dt><dd>{e.dates}</dd></div>
+            <div><dt>מיקום</dt><dd>{e.hall}</dd></div>
+            {d.practical.map((r) => <div><dt>{r.k}</dt><dd>{r.v}</dd></div>)}
+          </dl>
+          <a class="btn btn--light" href="/#visit" data-reveal>לרכישת כרטיסים <Fragment set:html={arrow} /></a>
+        </div>
+      </div>
+      <p class="info__credits" data-reveal>{d.credits}</p>
+    </div>
+  </section>
+
+  {related.length > 0 && (
+    <section class="rel">
+      <div class="wrap">
+        <h2 class="h-two" style="font-size:clamp(34px,4.6vw,76px)" data-reveal><span>אירועים</span><span class="t-blue">סביב התערוכה</span></h2>
+        <div class="elist">
+          {related.map((ev) => (
+            <a class="ev" href="/events/" data-type={ev.type}>
+              <div class="ev__date"><b>{ev.day}</b><span>{ev.month} · {ev.time}</span></div>
+              <div class="ev__title"><h3>{ev.title}</h3><p>{ev.who}</p></div>
+              <div><span class="pill">{ev.type}</span></div>
+              <div class="ev__place"><b>{ev.place}</b><span class="ev__status" data-s={ev.status}>{ev.status}</span></div>
+              <span class="ev__arrow"><Fragment set:html={arrow} /></span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
   <section class="exh" style="padding-top:clamp(70px,9vw,140px)">
     <div class="wrap">
-      <h2 class="h-two" data-reveal style="margin-bottom:clamp(40px,6vw,90px)"><span>עוד</span><span class="t-blue serif">תערוכות</span></h2>
+      <h2 class="h-two" data-reveal style="margin-bottom:clamp(40px,6vw,90px)"><span>עוד</span><span class="t-blue">תערוכות</span></h2>
       <div class="exh__grid">
-        {others.map((o, i) => (
+        {others.map((o) => (
           <a class="card" href={`/exhibitions/${o.slug}/`} data-reveal data-cursor-label="לתערוכה">
             <div class="card__img" style={`aspect-ratio:${o.ratio}`}>
               <span class="pill card__num">{o.kind}</span>
@@ -67,7 +154,7 @@ const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
   </section>
 
   <a class="next on-dark" href={`/exhibitions/${next.slug}/`}>
-    <img src={`/media/${next.img}.webp`} alt="" loading="lazy" decoding="async" />
+    <img src={`/media/${next.img}-wide.webp`} alt="" loading="lazy" decoding="async" />
     <div class="wrap next__in">
       <p>התערוכה הבאה</p>
       <h2>{next.title}</h2>
