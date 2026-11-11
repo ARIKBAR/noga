@@ -2,40 +2,36 @@
 import Base from '../layouts/Base.astro';
 import { exhibitions, experiences, stats, eventTypes } from '../data/site';
 import { events, visit, quotes, partners } from '../data/more';
-import { details } from '../data/details';
 const arrow = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>`;
 const zig = `<svg class="zig" viewBox="0 0 54 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l7-6 7 6 7-6 7 6 7-6 7 6 7-6"/></svg>`;
 const rep = (n: number) => Array.from({ length: n });
 const pad = (n: number) => String(n).padStart(2, '0');
-const slides = exhibitions.map((e) => ({ img: `/media/${e.img}-wide.webp`, title: e.title, kind: e.kind, meta: `${e.artist} · ${e.hall} · ${e.dates}`, href: `/exhibitions/${e.slug}/` }));
+const slides = exhibitions.map((e) => ({ key: e.img, img: `/media/${e.img}-wide.webp`, title: e.title, en: e.en, kind: e.kind, meta: `${e.artist} · ${e.hall} · ${e.dates}`, href: `/exhibitions/${e.slug}/` }));
 ---
 <Base>
   <!-- HERO -->
-  <section class="hx on-dark" data-hero data-slides={JSON.stringify(slides)} aria-roledescription="carousel" aria-label="התערוכות המוצגות עכשיו">
+  <section class="hx on-dark" data-hero data-slides={JSON.stringify(slides)} aria-label="טיול בין התערוכות המוצגות עכשיו">
     <img class="hx__fallback" data-fallback src={slides[0].img} alt="" fetchpriority="high" />
     <canvas class="hx__gl" data-gl aria-hidden="true"></canvas>
     <div class="hx__shade" aria-hidden="true"></div>
+    <div class="hx__tip" data-tip aria-hidden="true"></div>
     <div class="wrap hx__in">
       <div class="hx__top">
         <p>מוזיאון לאמנות ועיצוב · רציף 4, הנמל הישן</p>
         <p><i></i> פתוח היום עד 18:00</p>
       </div>
-      <h1 class="hx__title">
-        <span class="sr-only">נֹגה. אמנות שמאירה, נוגעת, בונה, מזמינה, מביטה ומאטה</span>
-        <span class="line" aria-hidden="true"><span>אמנות</span></span>
-        <span class="hx__verbs" data-verbs aria-hidden="true">{exhibitions.map((e, i) => <span class={i === 0 ? 'is-on' : ''}>{details[e.slug].verb}</span>)}</span>
-      </h1>
       <div class="hx__bottom">
         <div class="hx__now" aria-live="polite">
           <p class="hx__idx"><b data-cur>01</b><span> / {String(slides.length).padStart(2, '0')}</span><em data-kind>{slides[0].kind}</em></p>
-          <h2 data-name>{slides[0].title}</h2>
+          <h1 class="hx__name"><span class="sr-only">נֹגה, מוזיאון לאמנות ועיצוב. מוצג עכשיו: </span><span data-name>{slides[0].title}</span></h1>
           <p class="hx__meta" data-meta>{slides[0].meta}</p>
         </div>
-        <div class="hx__bars" role="tablist" aria-label="בחירת תערוכה">
+        <div class="hx__bars" role="tablist" aria-label="מעבר לתערוכה">
           {slides.map((sl, i) => <button type="button" role="tab" data-bar aria-selected={i === 0 ? 'true' : 'false'} aria-label={sl.title}><i></i></button>)}
         </div>
-        <a class="round" data-link href={slides[0].href} aria-label={`לתערוכה ${slides[0].title}`}><span><Fragment set:html={arrow} />לתערוכה</span></a>
+        <a class="btn btn--light" data-link href={slides[0].href}>לתערוכה <Fragment set:html={arrow} /></a>
       </div>
+      <p class="hx__hint" aria-hidden="true"><span></span>גללו כדי לטייל במוזיאון</p>
     </div>
   </section>
 

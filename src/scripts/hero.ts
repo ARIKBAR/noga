@@ -1,51 +1,14 @@
+import * as THREE from 'three';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-type Slide = { img: string; title: string; meta: string; href: string; kind: string };
+type Slide = { key: string; img: string; title: string; en: string; meta: string; href: string; kind: string };
+type Art = { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; room: number; url: string; loaded: boolean; base: THREE.Vector3 };
 
-const VERT = `attribute vec2 p; varying vec2 v; void main(){ v = p * .5 + .5; gl_Position = vec4(p, 0., 1.); }`;
-const FRAG = `
-precision highp float;
-varying vec2 v;
-uniform sampler2D t0, t1;
-uniform vec2 res, r0, r1, mouse;
-uniform float prog, time, zoom0, zoom1, vel, hover;
-
-float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f);
-  return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y); }
-float fbm(vec2 p){ float a = .5, s = 0.; for(int i=0;i<4;i++){ s += a*noise(p); p *= 2.03; a *= .5; } return s; }
-
-vec2 cover(vec2 uv, vec2 tr, float z){
-  float sa = res.x/res.y, ta = tr.x/tr.y; vec2 s = sa > ta ? vec2(1., ta/sa) : vec2(sa/ta, 1.);
-  return (uv - .5) * s / z + .5;
-}
-void main(){
-  vec2 uv = v;
-  float asp = res.x / res.y;
-  // pointer ripple
-  vec2 d = (uv - mouse) * vec2(asp, 1.);
-  float dist = length(d);
-  float wave = sin(dist * 34. - time * 3.2) * exp(-dist * 5.5) * (0.010 + vel * 0.05) * hover;
-  uv += normalize(d + 1e-5) * wave;
-  // liquid transition
-  float n = fbm(uv * vec2(asp, 1.) * 2.6 + time * .04);
-  float e = prog * 1.5;
-  float m = 1. - smoothstep(e - .5, e, n + (1. - uv.y) * .25);
-  vec2 disp = (vec2(n) - .5) * .42;
-  vec2 u0 = cover(uv + disp * prog, r0, zoom0);
-  vec2 u1 = cover(uv - disp * (1. - prog), r1, zoom1);
-  float sh = (vel * .02 + .0015) * hover;
-  vec3 c0 = vec3(texture2D(t0, u0 + vec2(sh, 0.)).r, texture2D(t0, u0).g, texture2D(t0, u0 - vec2(sh, 0.)).b);
-  vec3 c1 = vec3(texture2D(t1, u1 + vec2(sh, 0.)).r, texture2D(t1, u1).g, texture2D(t1, u1 - vec2(sh, 0.)).b);
-  vec3 c = mix(c0, c1, m);
-  // glowing edge on the transition front
-  float edge = smoothstep(0., .5, m) * (1. - smoothstep(.5, 1., m));
-  c += vec3(.23, .24, 1.) * edge * .55 * step(.001, prog) * step(prog, .999);
-  // film grain + vignette
-  c += (hash(uv * res + time) - .5) * .035;
-  c *= 1. - .35 * pow(length((v - .5) * vec2(1., 1.2)), 2.2);
-  gl_FragColor = vec4(c, 1.);
-}`;
+const GAP = 23; // distance between rooms along the corridor
+let VIEW = 10; // how far the camera stands from a room's main work (set per screen shape)
+let LOOK = 0.6; // how far the camera turns toward the main work
+const BG = 0x05061f;
 
 export function initHero(root: HTMLElement, motion: boolean) {
   const slides: Slide[] = JSON.parse(root.dataset.slides || '[]');
@@ -54,15 +17,16 @@ export function initHero(root: HTMLElement, motion: boolean) {
   const $$ = <T extends HTMLElement = HTMLElement>(s: string) => Array.from(root.querySelectorAll<T>(s));
   const canvas = $<HTMLCanvasElement>('[data-gl]')!;
   const fallback = $<HTMLImageElement>('[data-fallback]')!;
-  const verbs = $$('[data-verbs] > span');
   const bars = $$<HTMLButtonElement>('[data-bar]');
   const elCur = $('[data-cur]'), elName = $('[data-name]'), elMeta = $('[data-meta]'), elKind = $('[data-kind]');
   const link = $<HTMLAnchorElement>('[data-link]');
-  const DUR = 6;
-  let cur = 0, busy = false, timer: gsap.core.Tween | null = null, visible = true;
+  const tip = $('[data-tip]');
+  const n = slides.length;
+  let cur = -1;
 
-  /* ---------- text + bars ---------- */
-  const setText = (i: number, animate: boolean) => {
+  const setText = (i: number, animate = true) => {
+    if (i === cur) return;
+    cur = i;
     const s = slides[i];
     const swap = () => {
       if (elCur) elCur.textContent = String(i + 1).padStart(2, '0');
@@ -71,123 +35,208 @@ export function initHero(root: HTMLElement, motion: boolean) {
       if (elKind) elKind.textContent = s.kind;
       if (link) { link.href = s.href; link.setAttribute('aria-label', `לתערוכה ${s.title}`); }
     };
-    bars.forEach((b, j) => { b.setAttribute('aria-selected', String(j === i)); b.classList.toggle('is-done', j < i); });
-    if (!animate) { swap(); verbs.forEach((el, j) => el.classList.toggle('is-on', j === i)); return; }
-    const info = [elName, elMeta, elKind].filter(Boolean);
-    gsap.to(info, { yPercent: -60, opacity: 0, duration: 0.35, ease: 'power2.in', stagger: 0.03, onComplete: () => { swap(); gsap.fromTo(info, { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.6, ease: 'power3.out', stagger: 0.05 }); } });
-    const prev = verbs.find((el) => el.classList.contains('is-on'));
-    const next = verbs[i];
-    if (prev && prev !== next) gsap.to(prev, { yPercent: -110, duration: 0.8, ease: 'power3.inOut', onComplete: () => { prev.classList.remove('is-on'); gsap.set(prev, { clearProps: 'all' }); } });
-    if (next) { next.classList.add('is-on'); gsap.fromTo(next, { yPercent: 110 }, { yPercent: 0, duration: 0.8, ease: 'power3.inOut' }); }
+    bars.forEach((b, j) => { b.setAttribute('aria-selected', String(j === i)); b.classList.toggle('is-done', j <= i); });
+    const info = [elName, elMeta, elKind].filter(Boolean) as HTMLElement[];
+    if (!animate || !motion) { swap(); return; }
+    gsap.to(info, { yPercent: -50, opacity: 0, duration: 0.25, ease: 'power2.in', overwrite: true, onComplete: () => { swap(); gsap.fromTo(info, { yPercent: 50, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.5, ease: 'power3.out', stagger: 0.04 }); } });
   };
-  const runBar = (i: number) => {
-    timer?.kill();
-    bars.forEach((b) => gsap.set(b.querySelector('i'), { scaleX: 0 }));
-    const fill = bars[i]?.querySelector('i');
-    if (!fill || !motion) return;
-    timer = gsap.fromTo(fill, { scaleX: 0 }, { scaleX: 1, duration: DUR, ease: 'none', onComplete: () => go((cur + 1) % slides.length) });
-    if (!visible) timer.pause();
-  };
+  setText(0, false);
 
-  /* ---------- WebGL ---------- */
-  const gl = motion ? (canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' }) as WebGLRenderingContext | null) : null;
-  let draw: (() => void) | null = null;
-  const state = { prog: 0, zoom0: 1.08, zoom1: 1.08, vel: 0, hover: 0 };
-  let from = 0, to = 0;
-  const mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
-  const tex: (WebGLTexture | null)[] = [];
-  const size: [number, number][] = [];
-
-  if (gl) {
-    const sh = (type: number, src: string) => { const s = gl.createShader(type)!; gl.shaderSource(s, src); gl.compileShader(s); return s; };
-    const prg = gl.createProgram()!;
-    gl.attachShader(prg, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(prg, sh(gl.FRAGMENT_SHADER, FRAG)); gl.linkProgram(prg);
-    if (!gl.getProgramParameter(prg, gl.LINK_STATUS)) { console.warn('hero shader failed'); }
-    else {
-      gl.useProgram(prg);
-      const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-      const loc = gl.getAttribLocation(prg, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      const U = (n: string) => gl.getUniformLocation(prg, n);
-      const u = { t0: U('t0'), t1: U('t1'), res: U('res'), r0: U('r0'), r1: U('r1'), mouse: U('mouse'), prog: U('prog'), time: U('time'), zoom0: U('zoom0'), zoom1: U('zoom1'), vel: U('vel'), hover: U('hover') };
-      const load = (i: number) => new Promise<void>((resolve) => {
-        if (tex[i]) return resolve();
-        const img = new Image(); img.decoding = 'async';
-        img.onload = () => {
-          const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
-          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-          tex[i] = t; size[i] = [img.naturalWidth, img.naturalHeight]; resolve();
-        };
-        img.onerror = () => resolve();
-        img.src = slides[i].img;
-      });
-      const resize = () => {
-        const dpr = Math.min(devicePixelRatio || 1, 1.75);
-        const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
-        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; gl.viewport(0, 0, w, h); }
-      };
-      const t0 = performance.now();
-      draw = () => {
-        if (!tex[from] || !visible) return;
-        resize();
-        mouse.x += (mouse.tx - mouse.x) * 0.08; mouse.y += (mouse.ty - mouse.y) * 0.08;
-        state.vel += (Math.hypot(mouse.tx - mouse.x, mouse.ty - mouse.y) * 4 - state.vel) * 0.1;
-        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[from]!);
-        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex[to] || tex[from]!);
-        gl.uniform1i(u.t0, 0); gl.uniform1i(u.t1, 1);
-        gl.uniform2f(u.res, canvas.width, canvas.height);
-        gl.uniform2f(u.r0, size[from][0], size[from][1]);
-        const s1 = size[to] || size[from]; gl.uniform2f(u.r1, s1[0], s1[1]);
-        gl.uniform2f(u.mouse, mouse.x, 1 - mouse.y);
-        gl.uniform1f(u.prog, state.prog); gl.uniform1f(u.time, (performance.now() - t0) / 1000);
-        gl.uniform1f(u.zoom0, state.zoom0); gl.uniform1f(u.zoom1, state.zoom1);
-        gl.uniform1f(u.vel, Math.min(state.vel, 1)); gl.uniform1f(u.hover, state.hover);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      };
-      gsap.ticker.add(() => draw && draw());
-      root.addEventListener('pointermove', (e) => { const r = root.getBoundingClientRect(); mouse.tx = (e.clientX - r.left) / r.width; mouse.ty = (e.clientY - r.top) / r.height; });
-      root.addEventListener('pointerenter', () => gsap.to(state, { hover: 1, duration: 0.8 }));
-      root.addEventListener('pointerleave', () => gsap.to(state, { hover: 0, duration: 1.2 }));
-      load(0).then(() => { root.classList.add('is-gl'); gsap.to(state, { zoom0: 1, duration: DUR + 2, ease: 'none' }); load(1); });
-      (root as any).__load = load;
-    }
+  /* ---------- static fallback (no WebGL / reduced motion) ---------- */
+  let renderer: THREE.WebGLRenderer | null = null;
+  if (motion) {
+    try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' }); } catch { renderer = null; }
+  }
+  if (!renderer) {
+    root.classList.add('is-static');
+    bars.forEach((b, i) => b.addEventListener('click', () => { fallback.src = slides[i].img; setText(i, false); }));
+    return;
   }
 
-  /* ---------- navigation ---------- */
-  function go(i: number) {
-    if (i === cur || busy) return;
-    busy = true;
-    setText(i, motion);
-    const load: ((n: number) => Promise<void>) | undefined = (root as any).__load;
-    if (gl && load && root.classList.contains('is-gl')) {
-      load(i).then(() => {
-        from = cur; to = i; state.prog = 0; state.zoom1 = 1.1;
-        gsap.to(state, { zoom1: 1, duration: DUR + 2, ease: 'none' });
-        gsap.to(state, { prog: 1, duration: 1.6, ease: 'power2.inOut', onComplete: () => { from = i; to = i; state.zoom0 = state.zoom1; state.prog = 0; cur = i; busy = false; gsap.to(state, { zoom0: 1, duration: DUR, ease: 'none' }); load((i + 1) % slides.length); } });
-      });
-    } else {
-      fallback.style.opacity = '0';
-      setTimeout(() => { fallback.src = slides[i].img; fallback.style.opacity = '1'; cur = i; busy = false; }, 350);
-    }
-    runBar(i);
-  }
-  bars.forEach((b, i) => b.addEventListener('click', () => go(i)));
-  root.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') go((cur + 1) % slides.length);
-    if (e.key === 'ArrowRight') go((cur - 1 + slides.length) % slides.length);
+  /* ---------- scene ---------- */
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(BG);
+  scene.fog = new THREE.Fog(BG, 9, 40);
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 120);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const loader = new THREE.TextureLoader();
+  const arts: Art[] = [];
+  const hit: THREE.Mesh[] = [];
+  const world = new THREE.Group();
+  scene.add(world);
+  let xs = 1, ps = 1, mainX = 4.6; // horizontal spread, plane scale, x of the main works
+
+  const addArt = (room: number, url: string, w: number, h: number, x: number, y: number, z: number, ry: number) => {
+    const mat = new THREE.MeshBasicMaterial({ color: 0x1b1d4a, transparent: true, opacity: 0 });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+    mesh.position.set(x, y, z); mesh.rotation.y = ry;
+    mesh.userData = { room, bx: x, w, h };
+    // thin frame behind the artwork
+    const frame = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.16, h + 0.16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }));
+    frame.position.z = -0.02; mesh.add(frame);
+    world.add(mesh); hit.push(mesh);
+    arts.push({ mesh, mat, room, url, loaded: false, base: mesh.position.clone() });
+  };
+
+  slides.forEach((s, i) => {
+    const side = i % 2 ? 1 : -1;
+    const z = -i * GAP;
+    addArt(i, `/media/${s.key}-wide.webp`, 7.4, 4.16, side * 4.6, 0.2, z, -side * 0.42);
+    addArt(i, `/media/${s.key}-detail.webp`, 3.0, 3.75, -side * 4.2, 0.9, z + 2.6, side * 0.55);
+    addArt(i, `/media/${s.key}-life.webp`, 4.6, 2.59, -side * 5.2, -1.1, z - 4.2, side * 0.45);
   });
 
-  new IntersectionObserver(([en]) => { visible = en.isIntersecting && !document.hidden; visible ? timer?.resume() : timer?.pause(); }, { threshold: 0.05 }).observe(root);
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { visible = false; timer?.pause(); } else { visible = true; timer?.resume(); } });
+  /* big typography living inside the space */
+  const makeLabel = (text: string, sub: string, i: number) => {
+    const c = document.createElement('canvas'); c.width = 2048; c.height = 640;
+    const g = c.getContext('2d')!;
+    g.clearRect(0, 0, c.width, c.height);
+    g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    let size = 330; g.font = `800 ${size}px Nostela, Plinko, sans-serif`;
+    while (g.measureText(text).width > c.width - 80 && size > 80) { size -= 10; g.font = `800 ${size}px Nostela, Plinko, sans-serif`; }
+    g.fillStyle = '#ffffff'; g.fillText(text, c.width / 2, 270);
+    g.direction = 'ltr'; g.font = `500 74px Nostela, Plinko, sans-serif`; g.fillStyle = '#ffc940'; g.fillText(sub, c.width / 2, 540);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(13, 4.06), mat);
+    const side = i % 2 ? 1 : -1;
+    m.position.set(side * 1.6, 3.1, -i * GAP - 6);
+    m.userData.bx = side * 1.6;
+    m.userData.label = true;
+    world.add(m);
+    gsap.to(mat, { opacity: 1, duration: 1.2, delay: 0.3 });
+    return m;
+  };
+  const labels: THREE.Mesh[] = [];
+  const fontsReady = (document as any).fonts?.load ? Promise.all([(document as any).fonts.load('800 100px Nostela'), (document as any).fonts.load('500 40px Nostela')]) : Promise.resolve();
+  fontsReady.catch(() => {}).then(() => slides.forEach((s, i) => labels.push(makeLabel(s.title, s.en, i))));
 
-  setText(0, false);
-  runBar(0);
-
-  if (motion) {
-    gsap.from(root.querySelectorAll('.hx__title .line > span, [data-verbs]'), { yPercent: 115, duration: 1.3, ease: 'power4.out', stagger: 0.12, delay: 0.2 });
-    gsap.from(root.querySelectorAll('.hx__top > *, .hx__bottom > *'), { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out', stagger: 0.07, delay: 0.7 });
+  /* field of light lines: depth cue, and a nod to the museum's light installation */
+  const total = GAP * (n - 1) + 14;
+  {
+    const N = 520, pos = new Float32Array(N * 6), col = new Float32Array(N * 6);
+    const c1 = new THREE.Color(0x3a3dff), c2 = new THREE.Color(0x45cbff), c3 = new THREE.Color(0xa98bff);
+    for (let i = 0; i < N; i++) {
+      const x = (Math.random() - 0.5) * 30, z = 10 - Math.random() * (total + 20);
+      const near = Math.abs(x) < 2.2 ? (x < 0 ? -2.2 : 2.2) : x; // keep the walkway clear
+      const y0 = (Math.random() - 0.5) * 16, len = 0.8 + Math.random() * 5;
+      pos.set([near, y0, z, near, y0 + len, z], i * 6);
+      const c = [c1, c2, c3][i % 3];
+      col.set([c.r * 0.2, c.g * 0.2, c.b * 0.2, c.r, c.g, c.b], i * 6);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }));
+    lines.userData.lines = true;
+    scene.add(lines);
+    (scene as any).__lines = lines;
   }
+
+  /* ---------- lazy textures ---------- */
+  const loadRoom = (room: number) => arts.filter((a) => a.room === room && !a.loaded).forEach((a) => {
+    a.loaded = true;
+    loader.load(a.url, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; a.mat.map = t; a.mat.color.set(0xffffff); a.mat.needsUpdate = true; gsap.to(a.mat, { opacity: 1, duration: 0.9 }); });
+  });
+  arts.forEach((a) => gsap.to(a.mat, { opacity: 0.35, duration: 0.6 })); // placeholders
+  loadRoom(0); loadRoom(1);
+
+  /* ---------- state ---------- */
+  const st = { t: 0, intro: 1 };
+  const ptr = { x: 0, y: 0, tx: 0, ty: 0 };
+  const camPos = new THREE.Vector3(0, 0, VIEW);
+  const look = new THREE.Vector3();
+  let hovered: Art | null = null;
+  let active = true;
+
+  const layout = () => {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    renderer!.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
+    renderer!.setSize(w, h, false);
+    const asp = w / h;
+    camera.aspect = asp;
+    camera.fov = asp < 0.8 ? 68 : asp < 1.2 ? 58 : 50;
+    xs = asp < 0.8 ? 0.4 : asp < 1.2 ? 0.7 : 1;
+    ps = asp < 0.8 ? 0.66 : asp < 1.2 ? 0.82 : 1;
+    VIEW = asp < 0.8 ? 7.4 : asp < 1.2 ? 8.8 : 10;
+    LOOK = asp < 0.8 ? 1 : asp < 1.2 ? 0.8 : 0.6;
+    arts.forEach((a) => {
+      // never let a work hang across the walkway, whatever the screen shape
+      const half = (a.mesh.userData.w * ps * 0.5) * Math.cos(Math.abs(a.mesh.rotation.y));
+      a.mesh.position.x = Math.sign(a.base.x) * Math.max(Math.abs(a.base.x) * xs, half + 1.15);
+      a.mesh.scale.setScalar(ps * (a === hovered ? 1.05 : 1));
+    });
+    mainX = Math.abs(arts[0].mesh.position.x);
+    labels.forEach((l) => { l.scale.setScalar(asp < 0.8 ? 0.5 : asp < 1.2 ? 0.82 : 1); l.position.y = asp < 0.8 ? 4.5 : asp < 1.2 ? 5.0 : 4.35; l.position.x = Math.sign(l.userData.bx) * (asp < 0.8 ? mainX : Math.abs(l.userData.bx)); });
+    camera.updateProjectionMatrix();
+  };
+  layout();
+  addEventListener('resize', layout);
+  fontsReady.then(() => setTimeout(layout, 50));
+
+  /* ---------- scroll drives the camera ---------- */
+  const trigger = ScrollTrigger.create({
+    trigger: root, start: 'top top', end: () => `+=${Math.round(innerHeight * (n - 1) * 0.95)}`, pin: true, scrub: 0.9, anticipatePin: 1,
+    onUpdate: (self) => { st.t = self.progress; },
+  });
+  new IntersectionObserver(([en]) => { active = en.isIntersecting; }, { threshold: 0.01 }).observe(root);
+  bars.forEach((b, i) => b.addEventListener('click', () => {
+    const y = trigger.start + (trigger.end - trigger.start) * (i / (n - 1));
+    const lenis = (window as any).__lenis;
+    if (lenis) lenis.scrollTo(y, { duration: 1.6 }); else window.scrollTo({ top: y, behavior: 'smooth' });
+  }));
+
+  /* ---------- pointer: look around, hover, click ---------- */
+  const ray = new THREE.Raycaster();
+  const ndc = new THREE.Vector2(2, 2);
+  const setHover = (a: Art | null) => {
+    if (a === hovered) return;
+    hovered = a;
+    arts.forEach((x) => {
+      gsap.to(x.mesh.scale, { x: ps * (x === a ? 1.06 : 1), y: ps * (x === a ? 1.06 : 1), duration: 0.5, ease: 'power3.out' });
+      if (x.mat.map) gsap.to(x.mat.color, { r: a && x !== a ? 0.42 : 1, g: a && x !== a ? 0.42 : 1, b: a && x !== a ? 0.5 : 1, duration: 0.4 });
+    });
+    canvas.style.cursor = a ? 'pointer' : '';
+    if (tip) { tip.textContent = a ? slides[a.room].title : ''; gsap.to(tip, { scale: a ? 1 : 0, duration: 0.35, ease: a ? 'back.out(1.6)' : 'power2.in' }); }
+  };
+  const pick = (cx: number, cy: number) => {
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const res = ray.intersectObjects(hit, false)[0];
+    return res && res.distance < 26 ? arts.find((a) => a.mesh === res.object) || null : null;
+  };
+  canvas.addEventListener('pointermove', (e) => {
+    const r = canvas.getBoundingClientRect();
+    ptr.tx = ((e.clientX - r.left) / r.width) * 2 - 1; ptr.ty = ((e.clientY - r.top) / r.height) * 2 - 1;
+    if (e.pointerType === 'mouse') { setHover(pick(e.clientX, e.clientY)); if (tip) gsap.to(tip, { x: e.clientX - r.left, y: e.clientY - r.top, duration: 0.3, ease: 'power3' }); }
+  });
+  canvas.addEventListener('pointerleave', () => { ptr.tx = 0; ptr.ty = 0; setHover(null); });
+  canvas.addEventListener('click', (e) => { const a = pick(e.clientX, e.clientY); if (a) location.href = slides[a.room].href; });
+
+  /* ---------- render loop ---------- */
+  gsap.fromTo(st, { intro: 1 }, { intro: 0, duration: 2.4, ease: 'power3.out', delay: 0.15 });
+  const clock = new THREE.Clock();
+  const lines: THREE.Object3D = (scene as any).__lines;
+  gsap.ticker.add(() => {
+    if (!active) return;
+    const time = clock.getElapsedTime();
+    ptr.x += (ptr.tx - ptr.x) * 0.06; ptr.y += (ptr.ty - ptr.y) * 0.06;
+    const z = VIEW - st.t * (GAP * (n - 1)) + st.intro * 9;
+    const r = (VIEW - z) / GAP;                 // fractional room index
+    const side = -Math.cos(Math.PI * r);        // -1 at even rooms, +1 at odd ones, smooth in between
+    camPos.set(side * mainX * (LOOK - 0.6) * 0.9 - side * 0.5 * xs + ptr.x * 0.8, -ptr.y * 0.4 + Math.sin(time * 0.5) * 0.06, z);
+    camera.position.lerp(camPos, 0.12);
+    look.set(side * mainX * LOOK + ptr.x * 1.8, 0.35 - ptr.y * 0.9, camera.position.z - VIEW);
+    camera.lookAt(look);
+    lines.position.y = Math.sin(time * 0.25) * 0.4;
+    arts.forEach((a, i) => { a.mesh.position.y = a.base.y + Math.sin(time * 0.6 + i * 1.7) * 0.07; });
+    const idx = Math.max(0, Math.min(n - 1, Math.round(r)));
+    setText(idx);
+    loadRoom(Math.min(n - 1, idx + 1)); loadRoom(Math.min(n - 1, idx + 2));
+    renderer!.render(scene, camera);
+  });
+
+  root.classList.add('is-gl');
+  gsap.from(root.querySelectorAll('.hx__top > *, .hx__bottom > *, .hx__hint'), { opacity: 0, y: 22, duration: 0.9, ease: 'power3.out', stagger: 0.07, delay: 0.9 });
 }
