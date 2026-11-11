@@ -96,7 +96,7 @@ $$('[data-a11y]').forEach((b) => {
 
 /* ---------- hero ---------- */
 const heroEl = $('[data-hero]');
-if (heroEl) import('./hero').then((m) => { m.initHero(heroEl, motion); ScrollTrigger.refresh(); });
+if (heroEl) import('./hero').then((m) => { m.initHero(heroEl, motion); ScrollTrigger.sort(); ScrollTrigger.refresh(); });
 const rot = $('[data-rot]');
 if (rot) {
   const words = $$('span', rot);

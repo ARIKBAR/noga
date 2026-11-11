@@ -177,6 +177,8 @@ export function initHero(root: HTMLElement, motion: boolean) {
   /* ---------- scroll drives the camera ---------- */
   const trigger = ScrollTrigger.create({
     trigger: root, start: 'top top', end: () => `+=${Math.round(innerHeight * (n - 1) * 0.95)}`, pin: true, scrub: 0.9, anticipatePin: 1,
+    // Created after the page's other triggers (lazy import) but sits above them: refresh it first so they account for its pin spacing.
+    refreshPriority: 1,
     onUpdate: (self) => { st.t = self.progress; },
   });
   new IntersectionObserver(([en]) => { active = en.isIntersecting; }, { threshold: 0.01 }).observe(root);
