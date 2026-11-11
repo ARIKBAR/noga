@@ -190,16 +190,36 @@ $$('[data-count]').forEach((el) => {
   });
 });
 
+/* ---------- shared pointer tracking for hover effects ---------- */
+const pointerWatchers: ((x: number, y: number) => void)[] = [];
+{
+  let px = -1, py = -1, queued = false;
+  const run = () => { queued = false; pointerWatchers.forEach((fn) => fn(px, py)); };
+  const queue = () => { if (!queued && pointerWatchers.length) { queued = true; requestAnimationFrame(run); } };
+  addEventListener('mousemove', (e) => { px = e.clientX; py = e.clientY; queue(); }, { passive: true });
+  addEventListener('scroll', queue, { passive: true });
+  addEventListener('wheel', queue, { passive: true });
+  addEventListener('blur', () => { px = py = -1; queue(); });
+  document.addEventListener('mouseleave', () => { px = py = -1; queue(); });
+}
+
 /* ---------- cursor bubble on cards ---------- */
 const cursor = $('[data-cursor]');
 if (cursor && fine && motion) {
   const xTo = gsap.quickTo(cursor, 'x', { duration: 0.35, ease: 'power3' });
   const yTo = gsap.quickTo(cursor, 'y', { duration: 0.35, ease: 'power3' });
+  // Hover state is derived from what is actually under the pointer, and re-checked on scroll:
+  // scrolling moves the page under a still pointer without firing mouseleave.
+  let on: HTMLElement | null = null;
+  const sync = (x: number, y: number) => {
+    const el = x < 0 ? null : (document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-cursor-label]') ?? null);
+    if (el === on) return;
+    on = el;
+    if (el) { cursor.textContent = el.dataset.cursorLabel || ''; gsap.to(cursor, { scale: 1, duration: 0.4, ease: 'back.out(1.6)', overwrite: true }); }
+    else gsap.to(cursor, { scale: 0, duration: 0.25, overwrite: true });
+  };
+  pointerWatchers.push(sync);
   addEventListener('mousemove', (e) => { xTo(e.clientX); yTo(e.clientY); });
-  $$('[data-cursor-label]').forEach((el) => {
-    el.addEventListener('mouseenter', () => { cursor.textContent = el.dataset.cursorLabel || ''; gsap.to(cursor, { scale: 1, duration: 0.4, ease: 'back.out(1.6)' }); });
-    el.addEventListener('mouseleave', () => gsap.to(cursor, { scale: 0, duration: 0.3 }));
-  });
 }
 
 /* ---------- row hover preview ---------- */
@@ -209,13 +229,19 @@ if (preview && fine && motion) {
   const yTo = gsap.quickTo(preview, 'y', { duration: 0.5, ease: 'power3' });
   const imgs = $$('img', preview);
   addEventListener('mousemove', (e) => { xTo(e.clientX); yTo(e.clientY); });
-  $$('[data-row]').forEach((row, i) => {
-    row.addEventListener('mouseenter', () => {
+  const rows = $$('[data-row]');
+  let onRow = -1;
+  const sync = (x: number, y: number) => {
+    const el = x < 0 ? null : (document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-row]') ?? null);
+    const i = el ? rows.indexOf(el) : -1;
+    if (i === onRow) return;
+    onRow = i;
+    if (i >= 0) {
       imgs.forEach((im, j) => im.classList.toggle('is-on', i === j));
-      gsap.to(preview, { opacity: 1, scale: 1, rotate: i % 2 ? 4 : -4, duration: 0.45, ease: 'power3.out' });
-    });
-    row.addEventListener('mouseleave', () => gsap.to(preview, { opacity: 0, scale: 0.7, duration: 0.3 }));
-  });
+      gsap.to(preview, { opacity: 1, scale: 1, rotate: i % 2 ? 4 : -4, duration: 0.45, ease: 'power3.out', overwrite: true });
+    } else gsap.to(preview, { opacity: 0, scale: 0.7, duration: 0.25, overwrite: true });
+  };
+  pointerWatchers.push(sync);
 }
 
 /* ---------- events filter ---------- */
