@@ -33,3 +33,5 @@ public/media/hero.jpg
 public/media/hero.webp
 
 .claude/
+tools/
+conv.tmp.mjs
