@@ -478,7 +478,6 @@ html.a11y-still *, html.a11y-still *::before, html.a11y-still *::after { animati
 }
 
 .credit { display: inline-flex; align-items: center; gap: 12px; }
-.credit img { height: 34px; width: auto; background: #fff; border-radius: 10px; padding: 5px 12px; box-sizing: content-box; opacity: 1; }
 .footer__bottom { align-items: center; opacity: 1; }
 .footer__bottom > span { opacity: 0.75; }
 .footer__bottom .credit { opacity: 1; }
